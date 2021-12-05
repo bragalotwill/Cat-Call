@@ -1,3 +1,12 @@
+/*
+ * CAT CALL PROJECT
+ * 12/5/2021
+ * 
+ * This device recieves acceleration, RSS, and sound information
+ * from the cat collar via a BLE connection. Then, it provides the
+ * information over a serial port.
+ */
+
 #include <Wire.h>                 
 #include "SparkFun_MMA8452Q.h"    
 
