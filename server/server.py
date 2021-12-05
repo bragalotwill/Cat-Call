@@ -98,34 +98,53 @@ if __name__=='__main__':
 
     print('Server On')
 
-    #establish connection with android device
-    sock = socket.socket()
-    host = socket.gethostname()
-    port = 50000
-    sock.bind((host, port))
-
-    print('Searching for client')
-    sock.listen()
-    client, addr = sock.accept()
-    print('Connected to client')
-    
-    #shared data queue between io and processer
-    queue = Queue()
-
-    #run io and processer in parallel
-    arduino_io = ArduinoIO(queue)
-    process_data = ProcessData(queue)
-    serial_io = Process(target=arduino_io.run)
-    serial_data = Process(target=process_data.run)
-
-    serial_io.start()
-    serial_data.start()
-
+    sock = None
+    client = None
     try:
-        serial_io.join()
-        serial_data.join()
+        #establish connection with android device
+        with socket.socket() as sock:
+            host = "192.168.0.112"
+            port = 50000
+            sock.bind((host, port))
+
+            print('Searching for client')
+            sock.listen()
+            client, addr = sock.accept()
+            print('Connected to client')
+            
+            with client:
+                
+                while True:
+                    client.send(b"hello there\r\n");
+                    time.sleep(100);
+            
+            client.close()
+
+        print('Disconnected')
 
     except KeyboardInterrupt:
-        serial_io.terminate()
-        client.close()
+        if sock:
+            sock.close();
+        if client:
+            client.close();
+
+    #shared data queue between io and processer
+    #queue = Queue()
+
+    #run io and processer in parallel
+    #arduino_io = ArduinoIO(queue)
+    #process_data = ProcessData(queue)
+    #serial_io = Process(target=arduino_io.run)
+    #serial_data = Process(target=process_data.run)
+
+    #serial_io.start()
+    #serial_data.start()
+
+    #try:
+    #    serial_io.join()
+    #    serial_data.join()
+
+    #except KeyboardInterrupt:
+    #    serial_io.terminate()
+    #    client.close()
 

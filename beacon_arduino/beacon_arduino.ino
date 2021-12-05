@@ -55,7 +55,7 @@ void setup() {
       break;
   }
   // Set to remote control mode:
-  sendCommand("AT+MODE2");
+  //sendCommand("AT+MODE2");
   
 }
 
@@ -82,13 +82,13 @@ void sendCommand(const char * command) {
 void updateSerial() {
   // Output BLE data to computer:
   if (ble.available()) {
-    char input = ble.read();
-    if (input == 'r') {
+   // char input = ;
+  /*  if (input == '}') {
       sendCommand("AT+RSSI?");
     }
-    else {
+    else {*/
       Serial.write(ble.read());
-    }
+   // }
   }
 
   // Output computer data to BLE:

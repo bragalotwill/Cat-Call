@@ -20,6 +20,7 @@ MMA8452Q accel;
 int micPin = A0;
 
 bool fakeRSSI = false;
+bool debug = true;
 
              
 void setup() {
@@ -39,8 +40,8 @@ void setup() {
 }
 
 void sendCommand(const char * command) {
-  //Serial.print("Command send :");
-  //Serial.println(command);
+  if(debug) Serial.print("Command send :");
+  if(debug) Serial.println(command);
   ble.println(command);
   //wait some time
   delay(100);
@@ -54,8 +55,8 @@ void sendCommand(const char * command) {
   }
   //end the string
   reply[i] = '\0';
-  //Serial.print(reply);
-  //Serial.println("\nReply end");
+  if(debug) Serial.print(reply);
+  if(debug) Serial.println("\nReply end");
   delay(100);
 }
 
@@ -114,12 +115,35 @@ void updateCat() {
   }
 }
 
+void updateSerial() {
+  // Output BLE data to computer:
+  if (ble.available()) {
+    char input = ble.read();
+    Serial.write(input);
+  }
+
+  // Output computer data to BLE:
+  if (Serial.available()) {
+    char input = Serial.read();
+    if (input == '}') {
+      updateRSSI('A');
+    }
+    else {
+      ble.write(input);
+    }
+  }
+}
+
 void loop() {
+  /*
   updateRSSI('A');
   updateRSSI('B');
   updateRSSI('C');
 
   updateCat();
-  
+
   delay(10);
+  */
+
+  updateSerial();
 }
