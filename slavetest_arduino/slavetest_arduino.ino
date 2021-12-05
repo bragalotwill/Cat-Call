@@ -1,5 +1,5 @@
 #include "SoftwareSerial.h"
-SoftwareSerial ble(4,3); // TX, RX
+SoftwareSerial ble(4, 3); // TX, RX
 
 /*
    Beacon A UUID: AAAA
@@ -13,6 +13,7 @@ void setup() {
   ble.begin(9600); // Bluetooth device
   Serial.begin(9600); // Computer debugging
 
+/*
   sendCommand("AT");
   // Slave mode:
   sendCommand("AT+ROLE0");
@@ -21,7 +22,7 @@ void setup() {
   // Set this name
   sendCommand("AT+NAMESlave");
   // Get this address
-  sendCommand("AT+LADDR");
+  sendCommand("AT+LADDR"); */
 }
 
 void sendCommand(const char * command) {
@@ -54,8 +55,9 @@ void updateSerial() {
   }
 
   // Output computer data to BLE:
-  if (Serial.available())
+  if (Serial.available()) {
     ble.write(Serial.read());
+  }
 }
 
 void loop() {

@@ -28,74 +28,51 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
   pinMode(micPin, INPUT);
-  accel.init();  
+  accel.init();
 
   sendCommand("AT");
-  // Master mode:
-  sendCommand("AT+ROLE0");
-  // Set this UUID:
-  sendCommand("AT+CHARCADA");
-  // Set this name
-  sendCommand("AT+NAMECollar");
+  sendCommand("AT+IMME1");
+  sendCommand("AT+NOTI1");
+  sendCommand("AT+NOTP1");
+  sendCommand("AT+ROLE1");
 }
 
-void sendCommand(const char * command) {
+String sendCommand(const char * command) {
   if(debug) Serial.print("Command send :");
   if(debug) Serial.println(command);
   ble.println(command);
   //wait some time
   delay(100);
 
-  char reply[100];
+  char reply[1000];
   int i = 0;
   while (ble.available()) {
-    reply[i] = ble.read();
+    char newChar = ble.read();
+    if (i < 998) {
+    reply[i] = newChar;
     i += 1;
-    i %= 100;
+    }
   }
   //end the string
   reply[i] = '\0';
   if(debug) Serial.print(reply);
   if(debug) Serial.println("\nReply end");
-  delay(100);
+  delay(1000);
+  return (String) reply;
 }
 
-void updateRSSI(char beacon) {
-  Serial.print("RSSI");
-  Serial.print(beacon);
-  Serial.print(":");
-  if (fakeRSSI) {
-    // Print fake RSSI value
-    Serial.println(random(-150000, -30000)/1000.0, 5);
-    return;
-  }
-    switch (beacon)
-      {
-        case 'A':
-          sendCommand("AT+UUIDAAAA");
-          break;
-        case 'B':
-          sendCommand("AT+UUIDBBBB");
-          break;
-        default:
-        case 'C':
-          sendCommand("AT+UUIDCCCC");
-          break;
-      }
-    delay(10);
-    // Send request for RSSI
-    ble.write('r');
-    // Give response time
-    delay(100);
-    if (ble.available()) {
-      while(ble.available()){
-        Serial.write(ble.read());
-      }
-      Serial.print("\n");
-    }
-    else { // No response from RSSI request
-      Serial.println("unavailable");
-    }
+void updateRSSI() {
+  // Get list of available devices
+  String list = sendCommand("AT+DISC?");
+  
+  // Search in list for beacon A
+  int loc = list.indexOf("209148593EF4");
+  if (loc+24 < list.length() && debug) Serial.println("A in reply: \"" + list.substring(loc, loc + 24) + "\"");
+  // Extract RSSI for beacon A
+  // Search in list for beacon B
+  // Extract RSSI for beacon B
+  // Search in list for beacon C
+  // Extract RSSI for beacon C
 }
 
 void updateCat() {
@@ -118,32 +95,20 @@ void updateCat() {
 void updateSerial() {
   // Output BLE data to computer:
   if (ble.available()) {
-    char input = ble.read();
-    Serial.write(input);
+      Serial.write(ble.read());
   }
 
   // Output computer data to BLE:
-  if (Serial.available()) {
-    char input = Serial.read();
-    if (input == '}') {
-      updateRSSI('A');
-    }
-    else {
-      ble.write(input);
-    }
-  }
+  if (Serial.available())
+    ble.write(Serial.read());
 }
 
 void loop() {
-  /*
-  updateRSSI('A');
-  updateRSSI('B');
-  updateRSSI('C');
+  updateRSSI();
 
   updateCat();
 
   delay(10);
-  */
 
-  updateSerial();
+  // updateSerial();
 }
