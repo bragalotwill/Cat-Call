@@ -1,15 +1,5 @@
-/*
-   CAT CALL PROJECT
-   12/5/2021
-
-   This device provides a fixed point for comparison
-   with a cat collar's location. All it does is wait
-   for a BLE connection to be occasionally initiated by
-   collar.
-*/
-
 #include "SoftwareSerial.h"
-SoftwareSerial ble(4, 3); // TX, RX
+SoftwareSerial ble(4,3); // TX, RX
 
 /*
    Beacon A UUID: AAAA
@@ -32,6 +22,8 @@ void setup() {
   sendCommand("AT+CHARCADA");
   // Set this name
   sendCommand("AT+NAMEMaster");
+  // Get this address
+  sendCommand("AT+LADDR");
 }
 
 void sendCommand(const char * command) {
@@ -54,7 +46,7 @@ void sendCommand(const char * command) {
   reply[i] = '\0';
   Serial.print(reply);
   Serial.println("\nReply end");
-  delay(100);
+  delay(1000);
 }
 
 void updateSerial() {
