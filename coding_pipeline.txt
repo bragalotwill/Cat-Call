@@ -1,0 +1,50 @@
+Coding Pipeline
+
+1. Collar
+    a. (BLE) make connection to beacons
+    b. (Offline) calculate TxPower - initial RSSI when 1m away from Beacon
+    c. calculate RSSI
+    d. (BLE) send (t, [RSSI(t, i) for i:[1, 3]], [TxPower(t, i) for i:[1, 3]], Mic[t], Acc[t]) for a time t
+
+2. Desktop Arduino
+    a. (BLE) receive Collar tuple
+    b. (Serial) print tuple data
+
+3. Desktop
+    a. (Serial) receive tuple
+    b. calculate cat_position
+    c. calculate mood
+    d. calculate motion_type
+    e. (LAN) write calculations to database
+
+4. Android
+    a. (LAN) receive calculations from database
+    b. display cat_position
+    c. display mood
+    d. display motion_type
+
+
+cat_position:
+    x, y, room = [wila_bedroom, tony_bedroom, adit_bedroom, corridor, corr_bathroom, 
+                    liv_room, kitchen, kitch_bathroom];
+    a. get kalman filter prediction
+    b. receive rssi, TxPower, accelerometer
+    c. update kalman filter
+
+mood:
+    cat sound = [angry, defence, fighting, happy, huntingmind, mating, mother, paining, resting, warning];
+    a. run audio through cat sound ml (if audio is loud enough?)
+    b. return label
+
+motion_type:
+    position_change, velocity;
+    motion = [still, stalking, walking, running]
+
+Database:
+    time; x; y; room; sound; motion
+
+Android:
+    a. need map of the house - use beacons to make floor plan (worst case tape measure)
+    b. make icons for ginny and fe - happy, resting, neutral, paining, angry
+    c. show speed for cat - vector or text? 
+    d. send notifications for pain, anger
