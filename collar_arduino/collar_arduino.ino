@@ -22,6 +22,8 @@ int micPin = A0;
 bool fakeRSSI = false;
 bool debug = true;
 
+long period;
+int desktopFails;
              
 void setup() {
   ble.begin(9600); // Bluetooth device
@@ -30,25 +32,29 @@ void setup() {
   pinMode(micPin, INPUT);
   accel.init();
 
+  period = 10;
+  desktopFails = 0;
+
   sendCommand("AT");
   sendCommand("AT+IMME1");
   sendCommand("AT+NOTI1");
   sendCommand("AT+NOTP1");
   sendCommand("AT+ROLE1");
+  sendCommand("AT+NAMECollar");
 }
 
-String sendCommand(const char * command) {
+char* sendCommand(const char * command) {
   if(debug) Serial.print("Command send :");
   if(debug) Serial.println(command);
   ble.println(command);
   //wait some time
   delay(100);
 
-  char reply[1000];
+  static char reply[100];
   int i = 0;
   while (ble.available()) {
     char newChar = ble.read();
-    if (i < 998) {
+    if (i < 98) {
     reply[i] = newChar;
     i += 1;
     }
@@ -56,21 +62,42 @@ String sendCommand(const char * command) {
   //end the string
   reply[i] = '\0';
   if(debug) Serial.print(reply);
-  if(debug) Serial.println("\nReply end");
+  if(debug) Serial.println("\nReply end ");
   delay(1000);
-  return (String) reply;
+  return reply;
 }
 
-int sendDesktop(String data) {
+bool connDesktop() {
  // Get list of available devices
  String list = sendCommand("AT+DISC?");
- // Find listing of computer arduino, if present
-  int locID = list.indexOf("B0B1136840A0") - 2;
-  // Extract index
+ // Find index of computer arduino, if present
+  int locID = list.indexOf("B0B1136840A0");
   int locDIS = list.indexOf("DIS", locID - 6);
+  bool fail = false;
   if (locID > 0 && locDIS > 0) {
-    Serial.println("Index of Computer is " + list.substring(locDIS + 3, locID) + "********************");
+    String indexStr = list.substring(locDIS + 3, locID-1);
+    int len = indexStr.length();
+    int index = 0;
+    for (int dig = 0; dig < len; dig++) index += (indexStr.charAt(dig) - '0') * pow(10, dig);
+    if (debug) Serial.print("Index of Computer is ");
+    if (debug) Serial.println(index);
+    String command = "AT+CONN" + indexStr;
+    String attempt = sendCommand(command.c_str());
+  } else fail = true;
+
+  if (fail) desktopFails++;
+  else desktopFails = 0;
+}
+
+void sendDesktop(String data) {
+  if (connDesktop()) {
+    ble.println(data);
+    //wait some time
+    delay(100);
   }
+
+  // Terminate connection
+  sendCommand("AT");
 }
 
 void updateRSSI() {
@@ -90,39 +117,48 @@ void findRSSI(String list, String address, String beacon) {
   int locID = list.indexOf(address);
   // Extract RSSI for beacon 
   int locRSSI = list.indexOf("RSSI:", locID);
+  String rssi = "";
   if (locID > 0 && locRSSI > 0 && locRSSI + 9 < list.length()) {
-    String data = "RSSI" + beacon + list.substring(locRSSI + 4, locRSSI + 9);
-    if (debug) Serial.println(data);
-    sendDesktop(data);
+    rssi = list.substring(locRSSI + 4, locRSSI + 9);
+  } else {
+    rssi = "unavailable";
   }
+
+  String data = "RSSI" + beacon + ":" + rssi;
+  if (debug) Serial.println(data);
+  sendDesktop(data);
 }
 
 void updateCat() {
   //format data in csv style
+  String data = "";
   if (accel.available()) {
-    Serial.print("Cat Data:");
+    data += "Cat Data:";
     // accelerometer
-    Serial.print(accel.getCalculatedX(), 5);
-    Serial.print(",");
-    Serial.print(accel.getCalculatedY(), 5);
-    Serial.print(",");
-    Serial.print(accel.getCalculatedZ(), 5);
-    Serial.print(",");
+  /*  char buffer[6];
+    data += dtostrf(accel.getCalculatedX(), 5, 3, buffer);
+    data += ",";
+    data += dtostrf(accel.getCalculatedY(), 5, 3, buffer);
+    data += ",";
+    data += dtostrf(accel.getCalculatedZ(), 5, 3, buffer);
+    data += ",";*/
 
     // mic amplitude
-    Serial.println(analogRead(micPin));
+    data += analogRead(micPin);
+
+    sendDesktop(data);
   }
 }
 
-void updateSerial() {
-  // Output BLE data to computer:
-  if (ble.available()) {
-      Serial.write(ble.read());
+void checkDeskConnection() {
+  if (desktopFails > 20) {
+    period *= 10;
+    if (debug) Serial.println("Desktop hasn't responded in last 20 connection attempts.");
   }
-
-  // Output computer data to BLE:
-  if (Serial.available())
-    ble.write(Serial.read());
+  // Max delay time of 17 minutes
+  if (period >= 1000000) {
+    period = 1000000;
+  }
 }
 
 void loop() {
@@ -130,7 +166,9 @@ void loop() {
 
   updateCat();
 
-  delay(10);
+  delay(period);
+
+  checkDeskConnection();
 
   // updateSerial();
 }

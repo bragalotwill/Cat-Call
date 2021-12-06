@@ -19,6 +19,7 @@ void setup() {
   sendCommand("AT+NOTP1");
   sendCommand("AT+ROLE0");
   sendCommand("AT+NAMEComputer");
+  sendCommand("AT+FLAG0");
 }
 
 void sendCommand(const char * command) {
