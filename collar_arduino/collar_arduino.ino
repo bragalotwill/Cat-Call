@@ -37,14 +37,14 @@ void setup() {
   period = 10;
   desktopFails = 0;
 
+  sendCommand("AT+IMME1");
+  sendCommand("AT+NOTI1");
+  sendCommand("AT+NOTP1");
   bleInit();
 }
 
 void bleInit() {
   sendCommand("AT");
-  sendCommand("AT+IMME1");
-  sendCommand("AT+NOTI1");
-  sendCommand("AT+NOTP1");
   sendCommand("AT+ROLE1");
   sendCommand("AT+NAMEMaster");
 }
@@ -67,8 +67,8 @@ char* sendCommand(const char * command) {
   }
   //end the string
   reply[i] = '\0';
-  if(debug) Serial.print(reply);
-  if(debug) Serial.println("Reply end ");
+  //if(debug) Serial.print(reply);
+  //if(debug) Serial.println("Reply end ");
   delay(1000);
   return reply;
 }
@@ -90,6 +90,8 @@ bool connDesktop() {
     if (debug) Serial.println(index);
     String command = "AT+CONN" + indexStr;
     String attempt = sendCommand(command.c_str());
+    updateSerial();
+    Serial.print("------------Connection attempt: " + attempt);
   } else fail = true;
 
   if (fail) {
@@ -101,11 +103,34 @@ bool connDesktop() {
   return !fail;
 }
 
+void updateSerial() {
+  // Output BLE data to computer:
+  while (ble.available()) {
+      Serial.write(ble.read());
+  }
+
+  // Output computer data to BLE:
+  while (Serial.available()) {
+    char c = Serial.read();
+    ble.write(c);
+    if (c == '^') { // Disconnect
+      // Power cycle
+      digitalWrite(BLEpow, LOW);
+      delay(500);
+      digitalWrite(BLEpow, HIGH);
+      bleInit();
+    }
+  }
+}
+
 void sendDesktop(String data) {
   if (connDesktop()) {
-    ble.println(data);
+    ble.print("Connected!\n");
+    if(debug) Serial.print("Connected!\n");
+    ble.print(data);
+    if(debug) Serial.print(data);
     //wait some time
-    delay(100);
+    delay(500);
 
     // Terminate connection
     sendCommand("^");
@@ -193,6 +218,7 @@ void loop() {
   //updateRSSI();
 
   updateCat();
+  updateSerial();
 
   delay(period);
 
