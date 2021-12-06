@@ -7,6 +7,10 @@ import socket
 import time
 import serial
 import re
+import sys
+import select
+
+#select code: https://stackoverflow.com/questions/17386487/python-detect-when-a-socket-disconnects-for-any-reason
 
 #receives from serial port all data to be processed
 class ArduinoIO():
@@ -100,51 +104,47 @@ if __name__=='__main__':
 
     sock = None
     client = None
-    try:
-        #establish connection with android device
-        with socket.socket() as sock:
-            host = "192.168.0.112"
-            port = 50000
-            sock.bind((host, port))
+    #establish connection with android device
+    while True:
+        try:
+            with socket.socket() as sock:
+                host = "192.168.0.112"
+                port = 50000
+                sock.bind((host, port))
 
-            print('Searching for client')
-            sock.listen()
-            client, addr = sock.accept()
-            print('Connected to client')
-            
-            with client:
+                print('Searching for client')
+                sock.listen()
+                client, addr = sock.accept()
+                print('Connected to client')
                 
-                while True:
-                    client.send(b"hello there\r\n");
-                    time.sleep(100);
-            
-            client.close()
+                with client:
+                    
+                    # while True:
+                    #     client.send(b"hello there\r\n");
+                    #     time.sleep(100);
+                    
 
-        print('Disconnected')
+                    #shared data queue between io and processer
+                    queue = Queue()
 
-    except KeyboardInterrupt:
-        if sock:
-            sock.close();
-        if client:
-            client.close();
+                    #run io and processer in parallel
+                    arduino_io = ArduinoIO(queue)
+                    process_data = ProcessData(queue)
+                    serial_io = Process(target=arduino_io.run)
+                    serial_data = Process(target=process_data.run)
 
-    #shared data queue between io and processer
-    #queue = Queue()
+                    serial_io.start()
+                    serial_data.start()
 
-    #run io and processer in parallel
-    #arduino_io = ArduinoIO(queue)
-    #process_data = ProcessData(queue)
-    #serial_io = Process(target=arduino_io.run)
-    #serial_data = Process(target=process_data.run)
+                    try:
+                        serial_io.join()
+                        serial_data.join()
 
-    #serial_io.start()
-    #serial_data.start()
+                    except Exception:
+                        print('Disconnected')
+                        serial_io.terminate()
+                        serial_data.terminate()
+                        client.close()
 
-    #try:
-    #    serial_io.join()
-    #    serial_data.join()
-
-    #except KeyboardInterrupt:
-    #    serial_io.terminate()
-    #    client.close()
-
+        except KeyboardInterrupt:
+            sys.exit(0)
