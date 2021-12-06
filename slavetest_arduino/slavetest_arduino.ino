@@ -15,7 +15,17 @@ void setup() {
 }
 
 void reset() {
+  // Power cycle
+  digitalWrite(BLEpow, LOW);
+  delay(1000);
+  digitalWrite(BLEpow, HIGH);
+  delay(100);
+  digitalWrite(BLEpow, LOW);
+  delay(500);
+  digitalWrite(BLEpow, HIGH);
   sendCommand("AT");
+  sendCommand("AT+FLAG1");
+  delay(700);
   sendCommand("AT+FLAG0");
 }
 

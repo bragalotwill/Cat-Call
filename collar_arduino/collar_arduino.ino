@@ -15,6 +15,7 @@
 #include "SparkFun_MMA8452Q.h"
 #include "SoftwareSerial.h"
 SoftwareSerial ble(4, 3); // TX, RX
+int BLEpow = 5;
 
 MMA8452Q accel;      
 int micPin = A0;
@@ -24,6 +25,8 @@ bool debug = true;
 
 long period;
 int desktopFails;
+
+int BLEpow = 5;
              
 void setup() {
   ble.begin(9600); // Bluetooth device
@@ -35,12 +38,16 @@ void setup() {
   period = 10;
   desktopFails = 0;
 
+  bleInit();
+}
+
+void bleInit() {
   sendCommand("AT");
   sendCommand("AT+IMME1");
   sendCommand("AT+NOTI1");
   sendCommand("AT+NOTP1");
   sendCommand("AT+ROLE1");
-  sendCommand("AT+NAMECollar");
+  sendCommand("AT+NAMEMaster");
 }
 
 char* sendCommand(const char * command) {
@@ -97,7 +104,18 @@ void sendDesktop(String data) {
   }
 
   // Terminate connection
+  sendCommand("^");
   sendCommand("AT");
+  Serial.println("Attempting to disconnect...");
+  // Power cycle
+  digitalWrite(BLEpow, LOW);
+  delay(500);
+  digitalWrite(BLEpow, HIGH);
+  delay(100);
+  digitalWrite(BLEpow, LOW);
+  delay(1000);
+  digitalWrite(BLEpow, HIGH);
+  bleInit();
 }
 
 void updateRSSI() {

@@ -9,6 +9,7 @@
  
 #include "SoftwareSerial.h"
 SoftwareSerial ble(4, 3); // TX, RX
+int BLEpow = 5;
 
 void setup() {
   ble.begin(9600); // Bluetooth device
