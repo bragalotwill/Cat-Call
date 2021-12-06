@@ -6,47 +6,56 @@
  * from the cat collar via a BLE connection. Then, it provides the
  * information over a serial port.
  */
+ 
+#include "SoftwareSerial.h"
+SoftwareSerial ble(4, 3); // TX, RX
 
-#include <Wire.h>                 
-#include "SparkFun_MMA8452Q.h"    
-
-MMA8452Q accel;      
-int micPin = A0;
-
-             
 void setup() {
-  
-  Serial.begin(9600);
-  Wire.begin();
-  pinMode(micPin, INPUT);
-  accel.init();  
+  ble.begin(9600); // Bluetooth device
+  Serial.begin(9600); // Computer debugging
+
+  sendCommand("AT+IMME1");
+  sendCommand("AT+NOTI1");
+  sendCommand("AT+NOTP1");
+  sendCommand("AT+ROLE0");
+  sendCommand("AT+NAMEComputer");
 }
 
+void sendCommand(const char * command) {
+  Serial.print("Command send :");
+  Serial.println(command);
+  ble.println(command);
+  //wait some time
+  delay(100);
+
+  char reply[100];
+  int i = 0;
+  while (ble.available()) {
+    char newChar = ble.read();
+    if (i < 99) {
+    reply[i] = newChar;
+    i += 1;
+    }
+  }
+  //end the string
+  reply[i] = '\0';
+  Serial.print(reply);
+  Serial.println("\nReply end");
+  delay(100);
+}
+
+void updateSerial() {
+  // Output BLE data to computer:
+  if (ble.available()) {
+      Serial.write(ble.read());
+  }
+
+  // Output computer data to BLE:
+  if (Serial.available()) {
+    ble.write(Serial.read());
+  }
+}
 
 void loop() {
-
-  //format data in csv style
-  if (accel.available()) {   
-    
-    //fake rssi values
-    Serial.print(random(-150000, -30000)/1000.0, 5);
-    Serial.print(",");
-    Serial.print(random(-150000, -30000)/1000.0, 5);
-    Serial.print(",");
-    Serial.print(random(-150000, -30000)/1000.0, 5);
-    Serial.print(",");
-
-    //accelerometer
-    Serial.print(accel.getCalculatedX(), 5);
-    Serial.print(",");
-    Serial.print(accel.getCalculatedY(), 5);
-    Serial.print(",");
-    Serial.print(accel.getCalculatedZ(), 5);
-    Serial.print(",");
-
-    //mic amplitude
-    Serial.println(analogRead(micPin));
-  }
-  
-  delay(10);
+  updateSerial();
 }

@@ -61,18 +61,40 @@ String sendCommand(const char * command) {
   return (String) reply;
 }
 
+int sendDesktop(String data) {
+ // Get list of available devices
+ String list = sendCommand("AT+DISC?");
+ // Find listing of computer arduino, if present
+  int locID = list.indexOf("B0B1136840A0") - 2;
+  // Extract index
+  int locDIS = list.indexOf("DIS", locID - 6);
+  if (locID > 0 && locDIS > 0) {
+    Serial.println("Index of Computer is " + list.substring(locDIS + 3, locID) + "********************");
+  }
+}
+
 void updateRSSI() {
   // Get list of available devices
   String list = sendCommand("AT+DISC?");
-  
-  // Search in list for beacon A
-  int loc = list.indexOf("209148593EF4");
-  if (loc+24 < list.length() && debug) Serial.println("A in reply: \"" + list.substring(loc, loc + 24) + "\"");
-  // Extract RSSI for beacon A
-  // Search in list for beacon B
-  // Extract RSSI for beacon B
-  // Search in list for beacon C
-  // Extract RSSI for beacon C
+
+  // Beacon A
+  findRSSI(list, "209148593EF4", "A");
+  // Beacon B
+  findRSSI(list, "20914840620F", "B");
+  // Beacon C
+  findRSSI(list, "D0B5C295600D", "C");
+}
+
+void findRSSI(String list, String address, String beacon) {
+  // Search in list for beacon 
+  int locID = list.indexOf(address);
+  // Extract RSSI for beacon 
+  int locRSSI = list.indexOf("RSSI:", locID);
+  if (locID > 0 && locRSSI > 0 && locRSSI + 9 < list.length()) {
+    String data = "RSSI" + beacon + list.substring(locRSSI + 4, locRSSI + 9);
+    if (debug) Serial.println(data);
+    sendDesktop(data);
+  }
 }
 
 void updateCat() {
