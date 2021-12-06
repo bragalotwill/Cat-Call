@@ -15,11 +15,27 @@ void setup() {
   ble.begin(9600); // Bluetooth device
   Serial.begin(9600); // Computer debugging
 
+  sendCommand("AT");
   sendCommand("AT+IMME1");
   sendCommand("AT+NOTI1");
   sendCommand("AT+NOTP1");
   sendCommand("AT+ROLE0");
   sendCommand("AT+NAMEComputer");
+  sendCommand("AT+FLAG0");
+}
+
+void reset() {
+  // Power cycle
+  digitalWrite(BLEpow, LOW);
+  delay(1000);
+  digitalWrite(BLEpow, HIGH);
+  delay(100);
+  digitalWrite(BLEpow, LOW);
+  delay(500);
+  digitalWrite(BLEpow, HIGH);
+  sendCommand("AT");
+  sendCommand("AT+FLAG1");
+  delay(700);
   sendCommand("AT+FLAG0");
 }
 
@@ -43,13 +59,15 @@ void sendCommand(const char * command) {
   reply[i] = '\0';
   Serial.print(reply);
   Serial.println("\nReply end");
-  delay(100);
+  delay(1000);
 }
 
 void updateSerial() {
   // Output BLE data to computer:
   if (ble.available()) {
-      Serial.write(ble.read());
+      char c = ble.read();
+      if (c == '^') reset();
+      Serial.write(c);
   }
 
   // Output computer data to BLE:

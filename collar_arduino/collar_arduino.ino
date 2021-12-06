@@ -25,10 +25,9 @@ bool debug = true;
 
 long period;
 int desktopFails;
-
-int BLEpow = 5;
              
 void setup() {
+  if (debug) Serial.println("Setting up");
   ble.begin(9600); // Bluetooth device
   Serial.begin(9600);
   Wire.begin();
@@ -69,7 +68,7 @@ char* sendCommand(const char * command) {
   //end the string
   reply[i] = '\0';
   if(debug) Serial.print(reply);
-  if(debug) Serial.println("\nReply end ");
+  if(debug) Serial.println("Reply end ");
   delay(1000);
   return reply;
 }
@@ -77,6 +76,7 @@ char* sendCommand(const char * command) {
 bool connDesktop() {
  // Get list of available devices
  String list = sendCommand("AT+DISC?");
+ if (debug) Serial.print(list);
  // Find index of computer arduino, if present
   int locID = list.indexOf("B0B1136840A0");
   int locDIS = list.indexOf("DIS", locID - 6);
@@ -92,8 +92,13 @@ bool connDesktop() {
     String attempt = sendCommand(command.c_str());
   } else fail = true;
 
-  if (fail) desktopFails++;
+  if (fail) {
+    desktopFails++;
+    if (debug) Serial.println("\tComputer not found");
+  }
   else desktopFails = 0;
+
+  return !fail;
 }
 
 void sendDesktop(String data) {
@@ -101,21 +106,21 @@ void sendDesktop(String data) {
     ble.println(data);
     //wait some time
     delay(100);
-  }
 
-  // Terminate connection
-  sendCommand("^");
-  sendCommand("AT");
-  Serial.println("Attempting to disconnect...");
-  // Power cycle
-  digitalWrite(BLEpow, LOW);
-  delay(500);
-  digitalWrite(BLEpow, HIGH);
-  delay(100);
-  digitalWrite(BLEpow, LOW);
-  delay(1000);
-  digitalWrite(BLEpow, HIGH);
-  bleInit();
+    // Terminate connection
+    sendCommand("^");
+    sendCommand("AT");
+    Serial.println("\tAttempting to disconnect...");
+    // Power cycle
+    digitalWrite(BLEpow, LOW);
+    delay(500);
+    digitalWrite(BLEpow, HIGH);
+    delay(100);
+    digitalWrite(BLEpow, LOW);
+    delay(1000);
+    digitalWrite(BLEpow, HIGH);
+    bleInit();
+  }
 }
 
 void updateRSSI() {
@@ -153,25 +158,30 @@ void updateCat() {
   if (accel.available()) {
     data += "Cat Data:";
     // accelerometer
-  /*  char buffer[6];
-    data += dtostrf(accel.getCalculatedX(), 5, 3, buffer);
+    char bufr[8];
+    dtostrf(accel.getCalculatedX(), 5, 2, bufr);
+    data += bufr;
     data += ",";
-    data += dtostrf(accel.getCalculatedY(), 5, 3, buffer);
+    dtostrf(accel.getCalculatedY(), 5, 2, bufr);
+    data += bufr;
     data += ",";
-    data += dtostrf(accel.getCalculatedZ(), 5, 3, buffer);
-    data += ",";*/
+    dtostrf(accel.getCalculatedZ(), 5, 2, bufr);
+    data += bufr;
+    data += ",";
 
     // mic amplitude
     data += analogRead(micPin);
 
+    if (debug) Serial.println("data to send: " + data);
     sendDesktop(data);
-  }
+  } else if (debug) Serial.println("\tAccelerometer not available.");
 }
 
 void checkDeskConnection() {
   if (desktopFails > 20) {
     period *= 10;
-    if (debug) Serial.println("Desktop hasn't responded in last 20 connection attempts.");
+    if (debug) Serial.println("\tDesktop hasn't responded in last 20 connection attempts.");
+    desktopFails = 0;
   }
   // Max delay time of 17 minutes
   if (period >= 1000000) {
@@ -180,7 +190,7 @@ void checkDeskConnection() {
 }
 
 void loop() {
-  updateRSSI();
+  //updateRSSI();
 
   updateCat();
 
