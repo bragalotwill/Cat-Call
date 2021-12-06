@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
+from multiprocessing import Queue
 
 #formulas given by http://worldcomp-proceedings.com/proc/p2016/ESC6026.pdf
 class Position():
@@ -7,7 +8,7 @@ class Position():
 
     def __init__(self):
 
-        #constants
+        #constants to finetune
         self.tx_power = [-50.0, -50.0, -50.0] #rssi 1m away from beacon
         self.n = [2.0, 2.0, 2.0] #rssi calibration
         self.beacons = [[0, 0], [100, 0], [100, 100]] #beacon coordinates
@@ -18,21 +19,23 @@ class Position():
         self.curr_pos = [0, 0]
     
 
-    def run(self, rssi, acc):
+    def run(self, rssi, acc, rssi_history, pos, q):
 
-        self.rssi_ls.append(rssi)
-        self.acc_ls.append(acc)
+        rssi_history.append(rssi)
 
-        if (len(self.rssi_ls) < 10):
+        if (len(rssi_history) < 10):
+            q.put([[0, 0]])
+            q.put(rssi_history)
             return
         
-        self.rssi_ls.remove(0)
-        self.acc_ls.remove(0)
+        rssi_history.remove(0)
 
-        rssi_avg = np.average(self.rssi_ls)
+        rssi_avg = np.average(rssi_history)
 
         X = self.sensor(rssi_avg)
-        self.curr_pos = X
+        pos = [X]
+        q.put(pos)
+        q.put(rssi_history)
         #need gyroscope to apply acceleration kalman filter
 
 
